@@ -1,12 +1,15 @@
-name: "Coveralls Coverage"
+name: "Codecov Coverage"
 
 on:
-  push:
-    branches: [develop, master]
+  workflow_run:
+    workflows: ['Serverless Deploy']
+    types:
+      - completed
 
 jobs:
-  Backend-Coverage:
+  Coverage:
     runs-on: ubuntu-latest
+
     steps:
       - name: Checkout to devlop/master branch
         uses: actions/checkout@v2
@@ -19,19 +22,17 @@ jobs:
       - name: Install all package dependencies
         run: yarn
 
-      - name: Generate coverage report for backend
+      - name: Generate coverage report for backend files
         run: yarn test -- --coverage
 
-      - name: Changed to client directory and generate coverage for frontend
+      - name: Changed to client directory and generate coverage for frontend files
         run: |
           cd client
           yarn
-          yarn test -- --coverage --watchAll=false
+          yarn test --coverage --watchAll=false
+
       - name: Merge the coverage reports
-        run: |
-          node tools/scripts/merge-reports.js
-          cat ./coverage/lcov.info
-      - name: Upload report to Coveralls
-        uses: coverallsapp/github-action@master
-        with:
-          github-token: ${{ secrets.GITHUB_TOKEN }}
+        run: node tools/scripts/merge-reports.js
+
+      - name: Upload the merged coverage reports to Codecov
+        uses: codecov/codecov-action@v3

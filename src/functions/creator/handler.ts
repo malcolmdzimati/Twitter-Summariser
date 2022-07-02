@@ -3,29 +3,21 @@ import { middyfy } from '@libs/lambda';
 import CreatorServices from "../../services";
 
 import * as bcrypt from 'bcryptjs';
-import { formatJSONResponse } from "@libs/api-gateway";
-
-
-const responseHeaders = {
-    'Content-Type': 'application/json',
-    "Access-Control-Allow-Methods": '*',
-    'Access-Control-Allow-Origin': '*'
-}
+import { header, statusCodes } from "@functions/resources/APIresponse";
 
 export const getAllCreators = middyfy(async (): Promise<APIGatewayProxyResult> => {
     const creators = await CreatorServices.creatorService.getAllCreators();
     try {
         return {
-            statusCode: 200,
-            headers: responseHeaders,
+            statusCode: statusCodes.Successful,
+            headers: header,
             body: JSON.stringify(creators)
         }
     } catch (error) {
-        console.log(error);
         return {
-            statusCode: 500,
-            headers: responseHeaders,
-            body: JSON.stringify('Something went wrong')
+            statusCode: statusCodes.internalError,
+            headers: header,
+            body: JSON.stringify(error)
         };
     }
 
@@ -63,17 +55,16 @@ export const addCreator = middyfy(async (event: APIGatewayProxyEvent): Promise<A
         }
 
         return {
-            statusCode: 200,
-            headers: responseHeaders,
+            statusCode: statusCodes.Successful,
+            headers: header,
             body: JSON.stringify(response)
         };
 
     } catch (e) {
-        console.log(e);
         return {
-            statusCode: 500,
-            headers: responseHeaders,
-            body: JSON.stringify('Something went wrong')
+            statusCode: statusCodes.internalError,
+            headers: header,
+            body: JSON.stringify(e)
         };
     }
 })
@@ -82,9 +73,23 @@ export const loginCreator = middyfy(async (event: APIGatewayProxyEvent): Promise
     const params = JSON.parse(event.body);
 
     try {
-        const creator = await CreatorServices.creatorService.getCreator(
-            params.email, params.password
-        )
+        const creator = await CreatorServices.creatorService.getCreator(params.email, params.password)
+
+        if (creator===undefined) {
+            return {
+                statusCode: statusCodes.forbidden,
+                headers: header,
+                body: JSON.stringify("creator "+params.email+" not found")
+            };
+        }
+
+        if (await bcrypt.compare(params.password, creator.password)!=true) {
+            return {
+                statusCode: statusCodes.forbidden,
+                headers: header,
+                body: JSON.stringify("invalid credentials for user "+params.email)
+            };
+        }
 
         const response = {
             apiKey: creator.apiKey,
@@ -93,15 +98,15 @@ export const loginCreator = middyfy(async (event: APIGatewayProxyEvent): Promise
         }
 
         return {
-            statusCode: 200,
-            headers: responseHeaders,
+            statusCode: statusCodes.Successful,
+            headers: header,
             body: JSON.stringify(response)
         };
 
     } catch (e) {
         return {
-            statusCode: 403,
-            headers: responseHeaders,
+            statusCode: statusCodes.internalError,
+            headers: header,
             body: JSON.stringify({message: e.message})
         };
     }

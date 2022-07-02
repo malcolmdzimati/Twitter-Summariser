@@ -82,18 +82,23 @@ export default class ReportService {
 
         item["Report"] = rp;
         item["numOfBlocks"] = count;
-        //item["Report"] = report;
-        // result.Item.push({numBlocks: report.length*2+1});
-        
-        // const tweets = await ServicesLayer.tweetService.getTweets(item.resultSetID);
-
-        // item["tweets"] = tweets;
-
-        // console.log(result.Item);
-
-        
 
         return result.Item;
+    }
+
+    // get my report helper for backend
+    async getReportHelper(id: string): Promise<Report> {
+        const result = await this.docClient.get({
+            TableName: this.TableName,
+            Key: { "reportID": id}
+        }).promise();
+
+
+        console.log(result.Item);
+    
+
+        // const tweets = await ServicesLayer.tweetService.getTweets(resultSetID);
+        return result.Item as Report;
     }
 
     // get my reports
@@ -124,4 +129,51 @@ export default class ReportService {
 
         return report as Report;
     }
+
+    // update Report
+    async updateReportStatus(status: String, reportID: String): Promise<Report> {
+        const result = await this.docClient.update({
+            TableName: this.TableName,
+            Key: {"reportID": reportID},
+            UpdateExpression: "SET status = :status",
+            ExpressionAttributeValues: {
+                ":status": status
+            }
+            
+        }).promise();
+
+        return result.Attributes as Report;
+    }
+
+    // get my reports
+    async getAllPublishedReports(): Promise<Report[]> {
+        const result = await this.docClient.query({
+            TableName: this.TableName,
+            IndexName: "statusIndex",
+            KeyConditionExpression: '#status = :status',
+            ExpressionAttributeNames: {
+                "#status": "status"
+            },
+            ExpressionAttributeValues: {
+                ":status": "PUBLISHED"
+            }
+        }).promise();
+
+        console.log(result.Items);
+    
+        return result.Items as Report[];
+    }
+
+    // verify owner of report
+    async verifyOwner(reportID: string, apiKey1: string) : Promise<boolean>{
+        const report = this.getReportHelper(reportID);
+        const apiKey2 = (await report).apiKey;
+
+        if(apiKey1 == apiKey2){
+            return true;
+        }else{
+            return false;
+        }
+    }
+
 }

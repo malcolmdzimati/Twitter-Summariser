@@ -11,9 +11,6 @@ jobs:
   Serverless-Deploy:
     if: ${{ github.event.pull_request.merged }}
     runs-on: ubuntu-latest
-    strategy:
-      matrix:
-        node-version: [14.x]
 
     steps:
       - name: Checkout to develop branch
@@ -22,7 +19,7 @@ jobs:
       - name: Use Node.js ${{ matrix.node-version }}
         uses: actions/setup-node@v1
         with:
-          node-version: ${{ matrix.node-version }}
+          node-version: "14.x"
 
       - name: Install package dependencies for backend
         run: yarn
@@ -31,7 +28,9 @@ jobs:
         run: |
           cd client
           yarn
+          yarn lint:fix
           CI=false yarn run build
+          yarn format
 
       - name: Serverless deploy
         uses: serverless/github-action@v3
@@ -50,4 +49,4 @@ jobs:
           npm i -g aws-cli
           npm i -g aws-sdk
           npm i @aws-cdk/aws-cloudfront
-          aws cloudfront create-invalidation --distribution-id E2MJZ6KHWRD9W0 --paths "/*" 
+          aws cloudfront create-invalidation --distribution-id E39QEC4D07PM46 --paths "/*" 
